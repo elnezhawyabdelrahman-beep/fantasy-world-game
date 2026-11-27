@@ -24,12 +24,35 @@ const trunkMat = new StandardMaterial("bark", scene); trunkMat.diffuseColor = ne
 const leafMats = [new Color3(.16,.39,.31),new Color3(.21,.45,.34),new Color3(.24,.37,.31)].map((c,i)=>{const m=new StandardMaterial("leaf"+i,scene);m.diffuseColor=c;return m;});
 const crystalMat = new StandardMaterial("moon-crystal", scene); crystalMat.diffuseColor = new Color3(.36,.86,1); crystalMat.emissiveColor = new Color3(.12,.48,.7);
 const goldMat = new StandardMaterial("gold",scene);goldMat.diffuseColor=new Color3(.83,.65,.3);
-const player = new TransformNode("player",scene);
-const body = MeshBuilder.CreateCapsule("traveler",{height:1.8,radius:.38},scene);body.parent=player;body.position.y=.9;
-const bodyMat = new StandardMaterial("traveler-cloak",scene);bodyMat.diffuseColor=new Color3(.28,.31,.55);body.material=bodyMat;
-const head = MeshBuilder.CreateSphere("traveler-head",{diameter:.48,segments:16},scene);head.parent=player;head.position.y=1.95;
-const headMat = new StandardMaterial("traveler-face",scene);headMat.diffuseColor=new Color3(.84,.68,.52);head.material=headMat;
-const cape = MeshBuilder.CreateBox("traveler-cape",{width:.62,height:.9,depth:.12},scene);cape.parent=player;cape.position.set(0,1.08,.28);cape.rotation.x=-.12;cape.material=goldMat;
+
+function makeMaterial(name:string,color:Color3){
+  const m=new StandardMaterial(name,scene);m.diffuseColor=color;m.specularColor=new Color3(.12,.12,.12);return m;
+}
+type HumanoidRig={root:TransformNode;torso:Mesh;leftArm:Mesh;rightArm:Mesh;leftLeg:Mesh;rightLeg:Mesh};
+function createHumanoid(name:string,position:Vector3,palette:{cloth:Color3;trim:Color3;hair:Color3;skin:Color3;boots:Color3}):HumanoidRig{
+  const root=new TransformNode(name,scene);root.position.copyFrom(position);
+  const cloth=makeMaterial(name+"-cloth",palette.cloth),trim=makeMaterial(name+"-trim",palette.trim),hair=makeMaterial(name+"-hair",palette.hair),skin=makeMaterial(name+"-skin",palette.skin),boots=makeMaterial(name+"-boots",palette.boots);
+  const torso=MeshBuilder.CreateCapsule(name+"-tunic",{height:1.12,radius:.34,tessellation:16},scene);torso.parent=root;torso.position.y=1.08;torso.material=cloth;
+  const collar=MeshBuilder.CreateTorus(name+"-collar",{diameter:.42,thickness:.055,tessellation:16},scene);collar.parent=root;collar.position.y=1.58;collar.material=trim;
+  const belt=MeshBuilder.CreateTorus(name+"-belt",{diameter:.63,thickness:.055,tessellation:20},scene);belt.parent=root;belt.position.y=.91;belt.material=trim;
+  const head=MeshBuilder.CreateSphere(name+"-face",{diameter:.56,segments:20},scene);head.parent=root;head.position.y=1.91;head.material=skin;
+  const hairCap=MeshBuilder.CreateSphere(name+"-hair-cap",{diameter:.59,segments:16},scene);hairCap.parent=root;hairCap.position.set(0,2.08,-.015);hairCap.scaling.set(1,.58,1);hairCap.material=hair;
+  const fringe=MeshBuilder.CreateSphere(name+"-fringe",{diameter:.35,segments:12},scene);fringe.parent=root;fringe.position.set(0,2.02,-.225);fringe.scaling.set(1,.55,.5);fringe.material=hair;
+  const eyes=makeMaterial(name+"-eyes",new Color3(.08,.07,.06));
+  for(const side of [-1,1]){const eye=MeshBuilder.CreateSphere(name+"-eye",{diameter:.065,segments:8},scene);eye.parent=root;eye.position.set(side*.105,1.94,-.258);eye.scaling.set(1,.72,.55);eye.material=eyes;}
+  const nose=MeshBuilder.CreateSphere(name+"-nose",{diameter:.075,segments:8},scene);nose.parent=root;nose.position.set(0,1.84,-.29);nose.scaling.set(.8,1,.75);nose.material=skin;
+  const leftArm=MeshBuilder.CreateCapsule(name+"-left-arm",{height:.88,radius:.135,tessellation:12},scene);leftArm.parent=root;leftArm.position.set(-.39,1.19,0);leftArm.rotation.z=-.12;leftArm.material=cloth;
+  const rightArm=MeshBuilder.CreateCapsule(name+"-right-arm",{height:.88,radius:.135,tessellation:12},scene);rightArm.parent=root;rightArm.position.set(.39,1.19,0);rightArm.rotation.z=.12;rightArm.material=cloth;
+  for(const arm of [leftArm,rightArm]){const hand=MeshBuilder.CreateSphere(name+"-hand",{diameter:.23,segments:10},scene);hand.parent=arm;hand.position.y=-.43;hand.material=skin;}
+  const leftLeg=MeshBuilder.CreateCapsule(name+"-left-leg",{height:.78,radius:.16,tessellation:12},scene);leftLeg.parent=root;leftLeg.position.set(-.17,.43,0);leftLeg.material=trim;
+  const rightLeg=MeshBuilder.CreateCapsule(name+"-right-leg",{height:.78,radius:.16,tessellation:12},scene);rightLeg.parent=root;rightLeg.position.set(.17,.43,0);rightLeg.material=trim;
+  for(const side of [-1,1]){const boot=MeshBuilder.CreateCylinder(name+"-boot",{height:.23,diameterTop:.25,diameterBottom:.3,tessellation:12},scene);boot.parent=root;boot.position.set(side*.17,.13,-.055);boot.material=boots;}
+  const cape=MeshBuilder.CreateCylinder(name+"-cape",{height:1.12,diameterTop:.22,diameterBottom:.82,tessellation:8},scene);cape.parent=root;cape.position.set(0,1.02,.27);cape.material=trim;
+  return {root,torso,leftArm,rightArm,leftLeg,rightLeg};
+}
+const playerRig=createHumanoid("traveler",Vector3.Zero(),{cloth:new Color3(.19,.28,.52),trim:new Color3(.77,.55,.22),hair:new Color3(.16,.1,.08),skin:new Color3(.76,.54,.39),boots:new Color3(.16,.12,.1)});
+const player=playerRig.root;
+const body=playerRig.torso;
 const collidables: Mesh[] = [];
 function makeTree(x:number,z:number,scale:number){
   const trunk=MeshBuilder.CreateCylinder("tree-trunk",{height:2.1*scale,diameter:.35*scale},scene);trunk.position.set(x,1.05*scale,z);trunk.material=trunkMat;collidables.push(trunk);
@@ -43,8 +66,13 @@ for(let i=0;i<7;i++){const a=i*2.4+.4,r=5.5+(i%3)*3.1;const x=Math.cos(a)*r,z=Ma
 const archMat=new StandardMaterial("arch-stone",scene);archMat.diffuseColor=new Color3(.54,.52,.42);
 for(const [x,z] of [[0,-4],[0,-4.9]] as number[][]){const pillar=MeshBuilder.CreateBox("ruin-pillar",{width:.65,height:3.1,depth:.65},scene);pillar.position.set(x,1.55,z);pillar.material=archMat;}
 const lintel=MeshBuilder.CreateBox("ruin-lintel",{width:3.5,height:.55,depth:.7},scene);lintel.position.set(0,3.15,-4.45);lintel.material=archMat;
-const npc=MeshBuilder.CreateCapsule("keeper",{height:1.7,radius:.35},scene);npc.position.set(2,.85,-3);const npcMat=new StandardMaterial("keeper-robe",scene);npcMat.diffuseColor=new Color3(.64,.48,.25);npc.material=npcMat;
-const npcHead=MeshBuilder.CreateSphere("keeper-head",{diameter:.42},scene);npcHead.position.set(2,1.8,-3);npcHead.material=headMat;
+const keeperRig=createHumanoid("island-keeper",new Vector3(2,0,-3),{cloth:new Color3(.49,.25,.16),trim:new Color3(.86,.68,.34),hair:new Color3(.72,.7,.62),skin:new Color3(.65,.43,.31),boots:new Color3(.2,.13,.09)});
+const npc=keeperRig.root;
+const villagers=[
+ createHumanoid("village-weaver",new Vector3(-4,0,-2),{cloth:new Color3(.18,.42,.39),trim:new Color3(.84,.68,.38),hair:new Color3(.19,.12,.1),skin:new Color3(.84,.66,.5),boots:new Color3(.22,.15,.11)}),
+ createHumanoid("village-herbalist",new Vector3(4,0,-6),{cloth:new Color3(.39,.29,.53),trim:new Color3(.76,.7,.43),hair:new Color3(.22,.16,.12),skin:new Color3(.69,.48,.34),boots:new Color3(.18,.13,.1)}),
+ createHumanoid("village-guard",new Vector3(-5,0,-7),{cloth:new Color3(.28,.36,.31),trim:new Color3(.72,.63,.39),hair:new Color3(.12,.1,.09),skin:new Color3(.79,.59,.44),boots:new Color3(.16,.12,.1)})
+];
 const keys=new Set<string>();let joystick={x:0,y:0};let crystalsFound=0;let experience=0;let soundOn=true;let paused=false;let lastToast=0;let lastPos={x:0,z:0};let installPrompt:BeforeInstallPromptEvent|null=null;
 interface BeforeInstallPromptEvent extends Event {prompt:()=>Promise<void>;userChoice:Promise<{outcome:"accepted"|"dismissed"}>}
 const $=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
@@ -68,8 +96,9 @@ scene.onBeforeRenderObservable.add(()=>{
   const direction=new Vector3(side,0,forward);if(direction.lengthSquared()>1)direction.normalize();
   const angle=camera.alpha;const move=new Vector3(direction.x*Math.cos(angle)-direction.z*Math.sin(angle),0,direction.x*Math.sin(angle)+direction.z*Math.cos(angle));
   const speed=5.2;player.position.addInPlace(move.scale(speed*dt));player.position.x=Math.max(-43,Math.min(43,player.position.x));player.position.z=Math.max(-43,Math.min(43,player.position.z));
-  if(move.lengthSquared()>.001){player.rotation.y=Math.atan2(move.x,move.z);body.scaling.y=1+Math.sin(performance.now()*.012)*.018;}
+  if(move.lengthSquared()>.001){player.rotation.y=Math.atan2(move.x,move.z);const stride=Math.sin(performance.now()*.012)*.48;playerRig.leftLeg.rotation.x=stride;playerRig.rightLeg.rotation.x=-stride;playerRig.leftArm.rotation.x=-stride*.55;playerRig.rightArm.rotation.x=stride*.55;body.scaling.y=1+Math.abs(stride)*.018;}else{playerRig.leftLeg.rotation.x*=.82;playerRig.rightLeg.rotation.x*=.82;playerRig.leftArm.rotation.x*=.82;playerRig.rightArm.rotation.x*=.82;}
   camera.target=Vector3.Lerp(camera.target,new Vector3(player.position.x,1.1,player.position.z),Math.min(1,dt*5));
+  villagers.forEach((v,i)=>{v.root.rotation.y=Math.sin(performance.now()*.00045+i)*.16;});keeperRig.root.rotation.y=Math.sin(performance.now()*.00035)*.12;
   crystals.forEach((c,i)=>{if(c.mesh.isVisible){c.mesh.rotation.y+=dt*.8;c.mesh.position.y=.95+Math.sin(performance.now()*.002+i)*.16;}});
   if(performance.now()-lastToast>2600)$("toast").classList.remove("show");
   if(Vector3.DistanceSquared(player.position,new Vector3(lastPos.x,0,lastPos.z))>36){lastPos={x:player.position.x,z:player.position.z};}
