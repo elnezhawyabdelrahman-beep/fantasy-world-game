@@ -203,6 +203,7 @@ scene.onBeforeRenderObservable.add(()=>{
   camera.target=Vector3.Lerp(camera.target,new Vector3(player.position.x,1.1,player.position.z),Math.min(1,dt*5));
   villagers.forEach((v,i)=>{v.root.rotation.y=Math.sin(performance.now()*.00045+i)*.16;});
   worldAreas.forEach(area=>{if(!area.discovered&&Vector3.Distance(player.position,area.center)<area.radius){area.discovered=true;discoveredAreaIds.push(area.id);toast("New region discovered: "+area.name);void persist();}});
+  const activeArea=worldAreas.find(area=>Vector3.Distance(player.position,area.center)<area.radius);$("region-label").textContent=activeArea?activeArea.name:"Shattered Isles";
   ancientRelics.forEach((relic,i)=>{if(relic.mesh.isEnabled()){relic.mesh.rotation.y+=dt*.7;relic.mesh.position.y=.95+Math.sin(performance.now()*.0018+i)*.13;}});
 
   enemies.forEach(enemy=>{
