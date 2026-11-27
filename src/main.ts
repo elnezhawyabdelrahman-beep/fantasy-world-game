@@ -73,6 +73,33 @@ const villagers=[
  createHumanoid("village-herbalist",new Vector3(4,0,-6),{cloth:new Color3(.39,.29,.53),trim:new Color3(.76,.7,.43),hair:new Color3(.22,.16,.12),skin:new Color3(.69,.48,.34),boots:new Color3(.18,.13,.1)}),
  createHumanoid("village-guard",new Vector3(-5,0,-7),{cloth:new Color3(.28,.36,.31),trim:new Color3(.72,.63,.39),hair:new Color3(.12,.1,.09),skin:new Color3(.79,.59,.44),boots:new Color3(.16,.12,.1)})
 ];
+
+const villageWall=makeMaterial("village-warm-stone",new Color3(.62,.48,.34));
+const villageRoof=makeMaterial("village-terracotta",new Color3(.38,.19,.14));
+const villageWood=makeMaterial("village-dark-wood",new Color3(.22,.13,.08));
+const villageWindow=makeMaterial("village-window-glass",new Color3(.22,.48,.55));
+const villagePath=makeMaterial("village-path",new Color3(.48,.43,.34));
+function buildHouse(name:string,x:number,z:number,scale=1){
+ const root=new TransformNode(name,scene);root.position.set(x,0,z);root.scaling.setAll(scale);
+ const walls=MeshBuilder.CreateBox(name+"-walls",{width:4.2,height:3.1,depth:3.8},scene);walls.parent=root;walls.position.y=1.55;walls.material=villageWall;
+ const roof=MeshBuilder.CreateCylinder(name+"-roof",{diameter:5.4,height:2.05,tessellation:4},scene);roof.parent=root;roof.position.y=3.85;roof.rotation.y=Math.PI/4;roof.material=villageRoof;
+ const door=MeshBuilder.CreateBox(name+"-door",{width:.92,height:1.9,depth:.12},scene);door.parent=root;door.position.set(0,.95,-1.96);door.material=villageWood;
+ for(const side of [-1,1]){const win=MeshBuilder.CreateBox(name+"-window",{width:.72,height:.82,depth:.1},scene);win.parent=root;win.position.set(side*1.35,1.95,-1.96);win.material=villageWindow;const cross=MeshBuilder.CreateBox(name+"-window-cross",{width:.08,height:.9,depth:.13},scene);cross.parent=root;cross.position.set(side*1.35,1.95,-2.03);cross.material=villageWood;}
+ const chimney=MeshBuilder.CreateBox(name+"-chimney",{width:.48,height:1.25,depth:.48},scene);chimney.parent=root;chimney.position.set(1.25,4.1,.65);chimney.material=villageWall;
+ const step=MeshBuilder.CreateBox(name+"-step",{width:1.5,height:.18,depth:.55},scene);step.parent=root;step.position.set(0,.09,-2.2);step.material=villagePath;
+}
+buildHouse("weavers-cottage",-9,-2,.95);
+buildHouse("herbalists-home",9,-4,.9);
+buildHouse("village-inn",-9,-11,1.08);
+buildHouse("village-workshop",9,-12,.92);
+const villageWell=MeshBuilder.CreateCylinder("village-well",{height:.85,diameter:2.2,tessellation:16},scene);villageWell.position.set(0,.42,-9);villageWell.material=villagePath;
+const wellWater=MeshBuilder.CreateCylinder("well-water",{height:.08,diameter:1.65,tessellation:16},scene);wellWater.position.set(0,.86,-9);wellWater.material=waterMat;
+for(const x of [-1.05,1.05]){const post=MeshBuilder.CreateCylinder("well-post",{height:2.3,diameter:.14},scene);post.position.set(x,1.25,-9);post.material=villageWood;}
+const wellBeam=MeshBuilder.CreateBox("well-beam",{width:2.35,height:.16,depth:.18},scene);wellBeam.position.set(0,2.38,-9);wellBeam.material=villageWood;
+for(let i=0;i<15;i++){const z=-2.5-i*.82;const stone=MeshBuilder.CreateCylinder("village-path-stone",{height:.08,diameter:1.05,tessellation:8},scene);stone.position.set(Math.sin(i*.7)*.48,.045,z);stone.material=villagePath;}
+function makeLantern(x:number,z:number){const pole=MeshBuilder.CreateCylinder("lantern-post",{height:2.5,diameter:.12},scene);pole.position.set(x,1.25,z);pole.material=villageWood;const lamp=MeshBuilder.CreateBox("lantern-glass",{width:.48,height:.55,depth:.48},scene);lamp.position.set(x,2.62,z);lamp.material=crystalMat;const cap=MeshBuilder.CreateCylinder("lantern-cap",{height:.18,diameter:.68,tessellation:6},scene);cap.position.set(x,3,z);cap.material=goldMat;}
+[[-3,-5],[3,-5],[-5,-13],[5,-13]].forEach(([x,z])=>makeLantern(x,z));
+
 const keys=new Set<string>();let joystick={x:0,y:0};let crystalsFound=0;let experience=0;let soundOn=true;let paused=false;let lastToast=0;let lastPos={x:0,z:0};let installPrompt:BeforeInstallPromptEvent|null=null;
 interface BeforeInstallPromptEvent extends Event {prompt:()=>Promise<void>;userChoice:Promise<{outcome:"accepted"|"dismissed"}>}
 const $=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
@@ -82,7 +109,7 @@ async function persist(){const data:SaveData={version:1,crystals:crystalsFound,e
 async function restore(){try{const data=await loadGame();if(!data)return;crystalsFound=data.crystals;experience=data.experience;const collected=new Set(data.collectedIds);crystals.forEach(c=>{if(collected.has(c.id)){c.mesh.isVisible=false;c.mesh.setEnabled(false);}});player.position.set(data.player.x,0,data.player.z);refreshUI();}catch{toast("A new adventure begins — local saves are unavailable.");}}
 window.addEventListener("keydown",e=>{keys.add(e.key.toLowerCase());if([" ","arrowup","arrowdown","arrowleft","arrowright"].includes(e.key.toLowerCase()))e.preventDefault();if(e.key.toLowerCase()==="e")interact();if(e.key==="Escape")toggleMenu();});
 window.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
-function interact(){const distance=Vector3.Distance(player.position,npc.position);if(distance<3.2){toast(crystalsFound>=3?"The Keeper: The island's light is yours to protect.":"The Keeper: Seek the glowing moon crystals. They remember the old magic.");return;}const nearbyVillager=villagers.find(v=>Vector3.Distance(player.position,v.root.position)<2.7);if(nearbyVillager){const lines=["Weaver: The old paths are safest in daylight.","Herbalist: Moon crystals carry the island's gentle light.","Guard: Keep exploring, traveler. The island has many secrets."];toast(lines[villagers.indexOf(nearbyVillager)]);return;}const near=crystals.find(c=>c.mesh.isVisible&&Vector3.Distance(player.position,c.mesh.position)<2.1);if(near){near.mesh.isVisible=false;near.mesh.setEnabled(false);crystalsFound++;experience+=40;refreshUI();toast("Moon crystal found! +40 XP");if(crystalsFound===3)toast("Quest complete! The island shines brighter.");void persist();return;}toast("Explore the island and look for glowing crystals.");}
+function interact(){const distance=Vector3.Distance(player.position,npc.position);if(distance<3.2){toast(crystalsFound>=3?"The Keeper: The island's light is yours to protect.":"The Keeper: Seek the glowing moon crystals. They remember the old magic.");return;}const nearbyVillager=villagers.find(v=>Vector3.Distance(player.position,v.root.position)<2.7);if(nearbyVillager){const index=villagers.indexOf(nearbyVillager);const lines=["Weaver: I have prepared a bundle of cloth for your journey.","Herbalist: These useful herbs may help you on the road.","Guard: The village is safe again. You have earned our trust."];let completed:string[]=[];try{completed=JSON.parse(localStorage.getItem("fantasy-village-tasks")||"[]") as string[];}catch{}if(!completed.includes(String(index))){completed.push(String(index));localStorage.setItem("fantasy-village-tasks",JSON.stringify(completed));experience+=60;toast(lines[index]+" +60 XP");refreshUI();void persist();}else{toast(["Weaver: May your clothes serve you well.","Herbalist: Travel safely, and remember to rest.","Guard: The village gates are open to you."][index]);}return;}const near=crystals.find(c=>c.mesh.isVisible&&Vector3.Distance(player.position,c.mesh.position)<2.1);if(near){near.mesh.isVisible=false;near.mesh.setEnabled(false);crystalsFound++;experience+=40;refreshUI();toast("Moon crystal found! +40 XP");if(crystalsFound===3)toast("Quest complete! The island shines brighter.");void persist();return;}toast("Explore the island and look for glowing crystals.");}
 function toggleMenu(){paused=!paused;$("menu-panel").classList.toggle("hidden",!paused);}
 $("menu-button").addEventListener("click",toggleMenu);$("resume-button").addEventListener("click",toggleMenu);$("save-button").addEventListener("click",()=>void persist());$("sound-button").addEventListener("click",()=>{soundOn=!soundOn;$("sound-button").textContent="Sound: "+(soundOn?"On":"Off");toast("Sound setting updated.");});
 $("interact-button").addEventListener("click",interact);$("jump-button").addEventListener("click",()=>{if(player.position.y<.05){player.position.y=.7;setTimeout(()=>player.position.y=0,360);}});
