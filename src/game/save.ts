@@ -10,6 +10,7 @@ export interface SaveData {
   playerHealth?: number;
   collectedRelicIds?: string[];
   discoveredAreaIds?: string[];
+  regionQuestIds?: string[];
 }
 const DB_NAME = "fantasy-world-save";
 const STORE = "progress";
