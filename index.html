@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#101b28" />
+    <meta name="description" content="Explore the enchanted isles in Fantasy World, an offline-first 3D adventure." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>Fantasy World — The Shattered Isles</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas" aria-label="Fantasy World 3D game"></canvas>
+      <div id="loading-screen"><div class="loading-mark">✦</div><h1>Fantasy World</h1><p>Awakening the isles…</p><div class="loading-track"><span></span></div></div>
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Fantasy World home"><span class="brand-icon">✦</span><span>FANTASY <b>WORLD</b></span></a>
+        <div class="top-stats"><span class="stat-pill">✧ <b id="crystal-count">0</b></span><span class="stat-pill">LV <b id="level-count">1</b></span><button id="menu-button" class="icon-button" aria-label="Open menu">☰</button></div>
+      </header>
+      <section class="quest-card glass">
+        <div class="eyebrow">CURRENT QUEST</div><h2 id="quest-title">A Light in the Forest</h2><p id="quest-description">Find 3 moon crystals scattered across the island.</p>
+        <div class="quest-progress"><span id="quest-progress-bar"></span></div><small id="quest-progress-text">0 / 3 moon crystals</small>
+      </section>
+      <div class="hint-pill glass" id="hint">WASD to move · E to interact · Space to jump</div>
+      <section id="menu-panel" class="menu-panel glass hidden">
+        <button id="resume-button" class="menu-action">Resume adventure</button>
+        <button id="save-button" class="menu-action">Save progress</button>
+        <button id="sound-button" class="menu-action">Sound: On</button>
+        <button id="install-button" class="menu-action hidden">Install game</button>
+        <p id="save-status">Your adventure is saved on this device.</p>
+      </section>
+      <div class="mobile-controls" aria-label="Touch controls">
+        <div id="joystick" class="joystick"><div id="joystick-knob"></div></div>
+        <div class="action-buttons"><button id="jump-button" class="action-button">↑</button><button id="interact-button" class="action-button">✧</button></div>
+      </div>
+      <div id="toast" role="status" aria-live="polite"></div>
+      <footer class="bottom-note">THE SHATTERED ISLES <span>•</span> OFFLINE ADVENTURE</footer>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
