@@ -3,7 +3,7 @@ export interface SaveData {
   crystals: number;
   experience: number;
   collectedIds: string[];
-  player: { x: number; z: number };
+  player: { x: number; z: number };\n  inventory?: { id: string; name: string; description: string; quantity: number }[];\n  villageTasks?: string[];
 }
 const DB_NAME = "fantasy-world-save";
 const STORE = "progress";
