@@ -100,6 +100,52 @@ for(let i=0;i<15;i++){const z=-2.5-i*.82;const stone=MeshBuilder.CreateCylinder(
 function makeLantern(x:number,z:number){const pole=MeshBuilder.CreateCylinder("lantern-post",{height:2.5,diameter:.12},scene);pole.position.set(x,1.25,z);pole.material=villageWood;const lamp=MeshBuilder.CreateBox("lantern-glass",{width:.48,height:.55,depth:.48},scene);lamp.position.set(x,2.62,z);lamp.material=crystalMat;const cap=MeshBuilder.CreateCylinder("lantern-cap",{height:.18,diameter:.68,tessellation:6},scene);cap.position.set(x,3,z);cap.material=goldMat;}
 [[-3,-5],[3,-5],[-5,-13],[5,-13]].forEach(([x,z])=>makeLantern(x,z));
 
+
+type ForestEnemy={id:string;root:TransformNode;home:Vector3;health:number;maxHealth:number;defeated:boolean;cooldown:number;phase:number;parts:Mesh[]};
+const enemyMat=makeMaterial("sentinel-teal",new Color3(.23,.48,.43));
+const enemyTrim=makeMaterial("sentinel-amber",new Color3(.79,.48,.19));
+const enemySkin=makeMaterial("sentinel-skin",new Color3(.35,.58,.49));
+const enemyEye=makeMaterial("sentinel-eyes",new Color3(.95,.72,.28));
+function createForestEnemy(id:string,x:number,z:number):ForestEnemy{
+ const root=new TransformNode(id,scene);root.position.set(x,0,z);
+ const parts:Mesh[]=[];
+ const torso=MeshBuilder.CreateCapsule(id+"-body",{height:1.35,radius:.43,tessellation:12},scene);torso.parent=root;torso.position.y=1.12;torso.material=enemyMat;parts.push(torso);
+ const chest=MeshBuilder.CreateBox(id+"-chest-plate",{width:.72,height:.36,depth:.16},scene);chest.parent=root;chest.position.set(0,1.3,-.39);chest.material=enemyTrim;parts.push(chest);
+ const head=MeshBuilder.CreateSphere(id+"-head",{diameter:.72,segments:16},scene);head.parent=root;head.position.y=2.02;head.material=enemySkin;parts.push(head);
+ for(const side of [-1,1]){const eye=MeshBuilder.CreateSphere(id+"-eye",{diameter:.105,segments:8},scene);eye.parent=root;eye.position.set(side*.16,2.07,-.32);eye.material=enemyEye;parts.push(eye);
+  const horn=MeshBuilder.CreateCylinder(id+"-crest",{height:.42,diameterTop:.015,diameterBottom:.18,tessellation:7},scene);horn.parent=root;horn.position.set(side*.27,2.43,.02);horn.rotation.z=side*-.35;horn.material=enemyTrim;parts.push(horn);
+  const arm=MeshBuilder.CreateCapsule(id+"-arm",{height:.88,radius:.16,tessellation:10},scene);arm.parent=root;arm.position.set(side*.52,1.25,0);arm.rotation.z=side*-.18;arm.material=enemySkin;parts.push(arm);
+  const leg=MeshBuilder.CreateCapsule(id+"-leg",{height:.72,radius:.18,tessellation:10},scene);leg.parent=root;leg.position.set(side*.2,.42,0);leg.material=enemyTrim;parts.push(leg);
+ }
+ const mark=MeshBuilder.CreateTorus(id+"-rune",{diameter:1.1,thickness:.045,tessellation:16},scene);mark.parent=root;mark.position.y=.12;mark.rotation.x=Math.PI/2;mark.material=enemyTrim;parts.push(mark);
+ return {id,root,home:new Vector3(x,0,z),health:90,maxHealth:90,defeated:false,cooldown:0,phase:Math.random()*6,parts};
+}
+const enemies:ForestEnemy[]=[createForestEnemy("moss-sentinel-1",13,4),createForestEnemy("moss-sentinel-2",-15,10),createForestEnemy("moss-sentinel-3",20,-16)];
+let playerHealth=100;
+let playerAttackCooldown=0;
+let enemyDefeatedIds:string[]=[];
+function refreshCombatUI(){
+ $("player-health-bar").style.width=Math.max(0,playerHealth)+"%";
+ $("player-health-text").textContent=Math.max(0,playerHealth)+" / 100";
+ const nearest=enemies.filter(e=>!e.defeated).sort((a,b)=>Vector3.DistanceSquared(player.position,a.root.position)-Vector3.DistanceSquared(player.position,b.root.position))[0];
+ if(nearest&&Vector3.Distance(player.position,nearest.root.position)<13){
+  $("enemy-status").textContent="حارس الغابة · "+nearest.health+" / "+nearest.maxHealth;
+ }else{$("enemy-status").textContent="لا يوجد خصم قريب";}
+}
+function attackEnemy(){
+ if(paused||playerAttackCooldown>0)return;
+ playerAttackCooldown=.55;
+ const target=enemies.filter(e=>!e.defeated&&Vector3.Distance(player.position,e.root.position)<3.5).sort((a,b)=>Vector3.DistanceSquared(player.position,a.root.position)-Vector3.DistanceSquared(player.position,b.root.position))[0];
+ if(!target){toast("اقترب من حارس الغابة أولاً.");return;}
+ target.health=Math.max(0,target.health-30);
+ target.root.rotation.y=player.rotation.y+Math.PI;
+ if(target.health===0){
+  target.defeated=true;target.root.setEnabled(false);enemyDefeatedIds.push(target.id);experience+=120;addItem("sentinel-shard","بلورة الحارس","قطعة سحرية حصلت عليها بعد التحدي.");
+  toast("تم اجتياز التحدي! +120 XP ومكافأة جديدة.");refreshUI();void persist();
+ }else{toast("ضربة ناجحة! طاقة الحارس "+target.health+"/"+target.maxHealth);}
+ refreshCombatUI();
+}
+
 const keys=new Set<string>();let joystick={x:0,y:0};let crystalsFound=0;let experience=0;let inventory:{id:string;name:string;description:string;quantity:number}[]=[];let villageTasks:string[]=[];let soundOn=true;let paused=false;let lastToast=0;let lastPos={x:0,z:0};let installPrompt:BeforeInstallPromptEvent|null=null;
 interface BeforeInstallPromptEvent extends Event {prompt:()=>Promise<void>;userChoice:Promise<{outcome:"accepted"|"dismissed"}>}
 const $=<T extends HTMLElement>(id:string)=>document.getElementById(id) as T;
@@ -107,19 +153,19 @@ const toast=(message:string)=>{const el=$("toast");el.textContent=message;el.cla
 function refreshInventory(){const list=$("inventory-items");list.innerHTML="";$("inventory-empty").classList.toggle("hidden",inventory.length>0);inventory.forEach(item=>{const row=document.createElement("div");row.className="inventory-item";const glyph=document.createElement("span");glyph.className="inventory-glyph";glyph.textContent=item.id==="cloth"?"▤":item.id==="herbs"?"❀":"⚑";const info=document.createElement("div");const name=document.createElement("b");name.textContent=item.name;const desc=document.createElement("small");desc.textContent=item.description;info.append(name,desc);const count=document.createElement("strong");count.textContent="×"+item.quantity;row.append(glyph,info,count);list.append(row);});}
 function addItem(id:string,name:string,description:string){const existing=inventory.find(item=>item.id===id);if(existing)existing.quantity++;else inventory.push({id,name,description,quantity:1});refreshInventory();}
 function refreshUI(){ refreshInventory();$("crystal-count").textContent=String(crystalsFound);$("level-count").textContent=String(levelForExperience(experience));const helped=villageTasks;if(crystalsFound<3){$("quest-progress-bar").style.width=questProgress(crystalsFound,3)+"%";$("quest-progress-text").textContent=" "+crystalsFound+" / 3 moon crystals";}else{$("quest-progress-bar").style.width=(helped.length/3*100)+"%";$("quest-progress-text").textContent=helped.length+" / 3 villagers helped";$("quest-title").textContent=helped.length>=3?"A Village Reborn":"The Village Needs You";$("quest-description").textContent=helped.length>=3?"You have helped the villagers and restored hope to the island.":"Speak with the weaver, herbalist and guard to earn the village’s trust.";}}
-async function persist(){const data:SaveData={version:1,crystals:crystalsFound,experience,collectedIds:crystals.filter(c=>c.mesh.isVisible===false).map(c=>c.id),inventory,villageTasks,player:{x:player.position.x,z:player.position.z}};try{await saveGame(data);$("save-status").textContent="Progress saved on this device.";toast("Adventure saved.");}catch(e){toast(e instanceof Error?e.message:"Could not save progress.");}}
-async function restore(){try{const data=await loadGame();if(!data)return;crystalsFound=data.crystals;experience=data.experience;inventory=data.inventory??[];villageTasks=data.villageTasks??[];const collected=new Set(data.collectedIds);crystals.forEach(c=>{if(collected.has(c.id)){c.mesh.isVisible=false;c.mesh.setEnabled(false);}});player.position.set(data.player.x,0,data.player.z);refreshUI();}catch{toast("A new adventure begins — local saves are unavailable.");}}
-window.addEventListener("keydown",e=>{keys.add(e.key.toLowerCase());if([" ","arrowup","arrowdown","arrowleft","arrowright"].includes(e.key.toLowerCase()))e.preventDefault();if(e.key.toLowerCase()==="e")interact();if(e.key==="Escape")toggleMenu();});
+async function persist(){const data:SaveData={version:1,crystals:crystalsFound,experience,collectedIds:crystals.filter(c=>c.mesh.isVisible===false).map(c=>c.id),inventory,villageTasks,player:{x:player.position.x,z:player.position.z},enemyDefeatedIds,playerHealth};try{await saveGame(data);$("save-status").textContent="Progress saved on this device.";toast("Adventure saved.");}catch(e){toast(e instanceof Error?e.message:"Could not save progress.");}}
+async function restore(){try{const data=await loadGame();if(!data)return;crystalsFound=data.crystals;experience=data.experience;inventory=data.inventory??[];villageTasks=data.villageTasks??[];const collected=new Set(data.collectedIds);crystals.forEach(c=>{if(collected.has(c.id)){c.mesh.isVisible=false;c.mesh.setEnabled(false);}});player.position.set(data.player.x,0,data.player.z);enemyDefeatedIds=data.enemyDefeatedIds??[];playerHealth=data.playerHealth??100;enemies.forEach(enemy=>{if(enemyDefeatedIds.includes(enemy.id)){enemy.defeated=true;enemy.root.setEnabled(false);}});refreshUI();refreshCombatUI();}catch{toast("A new adventure begins — local saves are unavailable.");}}
+window.addEventListener("keydown",e=>{keys.add(e.key.toLowerCase());if([" ","arrowup","arrowdown","arrowleft","arrowright"].includes(e.key.toLowerCase()))e.preventDefault();if(e.key.toLowerCase()==="e")interact();if(e.key.toLowerCase()==="f")attackEnemy();if(e.key==="Escape")toggleMenu();});
 window.addEventListener("keyup",e=>keys.delete(e.key.toLowerCase()));
 function interact(){const distance=Vector3.Distance(player.position,npc.position);if(distance<3.2){toast(crystalsFound>=3?"The Keeper: The island's light is yours to protect.":"The Keeper: Seek the glowing moon crystals. They remember the old magic.");return;}const nearbyVillager=villagers.find(v=>Vector3.Distance(player.position,v.root.position)<2.7);if(nearbyVillager){const index=villagers.indexOf(nearbyVillager);const lines=["Weaver: I have prepared a bundle of cloth for your journey.","Herbalist: These useful herbs may help you on the road.","Guard: The village is safe again. You have earned our trust."];const completed=villageTasks;if(!completed.includes(String(index))){completed.push(String(index));const rewards=[{id:"cloth",name:"Traveler’s Cloth",description:"A sturdy piece of woven cloth."},{id:"herbs",name:"Healing Herbs",description:"A bundle of useful island herbs."},{id:"village-token",name:"Village Token",description:"A token showing the villagers trust you."}];const reward=rewards[index];addItem(reward.id,reward.name,reward.description);experience+=60;toast(lines[index]+" +60 XP · Item received");refreshUI();void persist();}else{toast(["Weaver: May your clothes serve you well.","Herbalist: Travel safely, and remember to rest.","Guard: The village gates are open to you."][index]);}return;}const near=crystals.find(c=>c.mesh.isVisible&&Vector3.Distance(player.position,c.mesh.position)<2.1);if(near){near.mesh.isVisible=false;near.mesh.setEnabled(false);crystalsFound++;experience+=40;refreshUI();toast("Moon crystal found! +40 XP");if(crystalsFound===3)toast("Quest complete! The island shines brighter.");void persist();return;}toast("Explore the island and look for glowing crystals.");}
 function toggleMenu(){paused=!paused;$("menu-panel").classList.toggle("hidden",!paused);}
 $("inventory-button").addEventListener("click",()=>{$("inventory-panel").classList.remove("hidden");});$("inventory-close").addEventListener("click",()=>$("inventory-panel").classList.add("hidden"));$("menu-button").addEventListener("click",toggleMenu);$("resume-button").addEventListener("click",toggleMenu);$("save-button").addEventListener("click",()=>void persist());$("sound-button").addEventListener("click",()=>{soundOn=!soundOn;$("sound-button").textContent="Sound: "+(soundOn?"On":"Off");toast("Sound setting updated.");});
-$("interact-button").addEventListener("click",interact);$("jump-button").addEventListener("click",()=>{if(player.position.y<.05){player.position.y=.7;setTimeout(()=>player.position.y=0,360);}});
+$("interact-button").addEventListener("click",interact);$("attack-button").addEventListener("click",attackEnemy);$("jump-button").addEventListener("click",()=>{if(player.position.y<.05){player.position.y=.7;setTimeout(()=>player.position.y=0,360);}});
 const joy=$("joystick");let joyPointer:number|null=null;joy.addEventListener("pointerdown",e=>{joyPointer=e.pointerId;joy.setPointerCapture(e.pointerId);moveJoy(e);});joy.addEventListener("pointermove",e=>{if(e.pointerId===joyPointer)moveJoy(e);});const resetJoy=()=>{joyPointer=null;joystick={x:0,y:0};$("joystick-knob").style.transform="translate(0,0)";};joy.addEventListener("pointerup",resetJoy);joy.addEventListener("pointercancel",resetJoy);
 function moveJoy(e:PointerEvent){const r=joy.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const len=Math.hypot(dx,dy),max=34;if(len>max){dx=dx/len*max;dy=dy/len*max;}joystick={x:dx/max,y:dy/max};$("joystick-knob").style.transform=`translate(${dx}px,${dy}px)`;}
 let verticalVelocity=0;
 scene.onBeforeRenderObservable.add(()=>{
-  const dt=Math.min(engine.getDeltaTime()/1000,.05);if(paused)return;
+  const dt=Math.min(engine.getDeltaTime()/1000,.05);if(paused)return;playerAttackCooldown=Math.max(0,playerAttackCooldown-dt);
   const forward=(keys.has("w")||keys.has("arrowup")?-1:0)+(keys.has("s")||keys.has("arrowdown")?1:0)+joystick.y;
   const side=(keys.has("d")||keys.has("arrowright")?1:0)-(keys.has("a")||keys.has("arrowleft")?1:0)+joystick.x;
   const direction=new Vector3(side,0,forward);if(direction.lengthSquared()>1)direction.normalize();
@@ -127,14 +173,31 @@ scene.onBeforeRenderObservable.add(()=>{
   const speed=5.2;player.position.addInPlace(move.scale(speed*dt));player.position.x=Math.max(-43,Math.min(43,player.position.x));player.position.z=Math.max(-43,Math.min(43,player.position.z));
   if(move.lengthSquared()>.001){player.rotation.y=Math.atan2(move.x,move.z);const stride=Math.sin(performance.now()*.012)*.48;playerRig.leftLeg.rotation.x=stride;playerRig.rightLeg.rotation.x=-stride;playerRig.leftArm.rotation.x=-stride*.55;playerRig.rightArm.rotation.x=stride*.55;body.scaling.y=1+Math.abs(stride)*.018;}else{playerRig.leftLeg.rotation.x*=.82;playerRig.rightLeg.rotation.x*=.82;playerRig.leftArm.rotation.x*=.82;playerRig.rightArm.rotation.x*=.82;}
   camera.target=Vector3.Lerp(camera.target,new Vector3(player.position.x,1.1,player.position.z),Math.min(1,dt*5));
-  villagers.forEach((v,i)=>{v.root.rotation.y=Math.sin(performance.now()*.00045+i)*.16;});keeperRig.root.rotation.y=Math.sin(performance.now()*.00035)*.12;
+  villagers.forEach((v,i)=>{v.root.rotation.y=Math.sin(performance.now()*.00045+i)*.16;});
+  enemies.forEach(enemy=>{
+   if(enemy.defeated)return;
+   enemy.cooldown=Math.max(0,enemy.cooldown-dt);
+   const delta=player.position.subtract(enemy.root.position);delta.y=0;const distance=delta.length();
+   if(distance<11&&distance>1.65){delta.normalize();enemy.root.position.addInPlace(delta.scale(1.65*dt));enemy.root.rotation.y=Math.atan2(delta.x,delta.z);}
+   else if(distance<=1.65&&enemy.cooldown<=0){enemy.cooldown=1.35;playerHealth=Math.max(0,playerHealth-9);toast("حارس الغابة اقترب! انتبه لطاقة اللاعب.");if(playerHealth===0){playerHealth=100;player.position.set(0,0,1);toast("استعدت طاقتك وعدت إلى ساحة القرية.");}refreshCombatUI();void persist();}
+   enemy.root.position.y=Math.sin(performance.now()*.002+enemy.phase)*.045;
+   enemy.root.rotation.z=Math.sin(performance.now()*.0015+enemy.phase)*.035;
+  });
+  refreshCombatUI();
+keeperRig.root.rotation.y=Math.sin(performance.now()*.00035)*.12;
   crystals.forEach((c,i)=>{if(c.mesh.isVisible){c.mesh.rotation.y+=dt*.8;c.mesh.position.y=.95+Math.sin(performance.now()*.002+i)*.16;}});
   if(performance.now()-lastToast>2600)$("toast").classList.remove("show");
   if(Vector3.DistanceSquared(player.position,new Vector3(lastPos.x,0,lastPos.z))>36){lastPos={x:player.position.x,z:player.position.z};}
 });
 await restore();engine.runRenderLoop(()=>scene.render());window.addEventListener("resize",()=>engine.resize());
-window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e as BeforeInstallPromptEvent;$("install-button").classList.remove("hidden");});
-$("install-button").addEventListener("click",async()=>{if(!installPrompt)return;await installPrompt.prompt();installPrompt=null;$("install-button").classList.add("hidden");});
+const installButtons=[$("install-button"),$("install-top-button")];
+const isStandalone=()=>window.matchMedia("(display-mode: standalone)").matches||(navigator as Navigator&{standalone?:boolean}).standalone===true;
+function updateInstallButtons(){const visible=!!installPrompt&&!isStandalone();installButtons.forEach(button=>button.classList.toggle("hidden",!visible));}
+window.addEventListener("beforeinstallprompt",event=>{event.preventDefault();installPrompt=event as BeforeInstallPromptEvent;updateInstallButtons();});
+async function requestInstall(){if(!installPrompt||isStandalone())return;const promptEvent=installPrompt;installPrompt=null;updateInstallButtons();await promptEvent.prompt();const choice=await promptEvent.userChoice;if(choice.outcome==="accepted"){installButtons.forEach(button=>button.classList.add("hidden"));}else{installPrompt=promptEvent;updateInstallButtons();}}
+installButtons.forEach(button=>button.addEventListener("click",()=>{void requestInstall();}));
+window.addEventListener("appinstalled",()=>{installPrompt=null;installButtons.forEach(button=>button.classList.add("hidden"));});
+const standaloneQuery=window.matchMedia("(display-mode: standalone)");standaloneQuery.addEventListener?.("change",updateInstallButtons);updateInstallButtons();
 if("serviceWorker" in navigator)window.addEventListener("load",()=>{void navigator.serviceWorker.register("./sw.js").catch(()=>{});});
-window.addEventListener("pagehide",()=>{const data:SaveData={version:1,crystals:crystalsFound,experience,collectedIds:crystals.filter(c=>!c.mesh.isVisible).map(c=>c.id),player:{x:player.position.x,z:player.position.z}};void saveGame(data).catch(()=>{});});
+window.addEventListener("pagehide",()=>{const data:SaveData={version:1,crystals:crystalsFound,experience,collectedIds:crystals.filter(c=>!c.mesh.isVisible).map(c=>c.id),inventory,villageTasks,player:{x:player.position.x,z:player.position.z},enemyDefeatedIds,playerHealth};void saveGame(data).catch(()=>{});});
 setTimeout(()=>{const loading=$("loading-screen");loading.style.opacity="0";setTimeout(()=>loading.remove(),750);toast("Welcome to the Shattered Isles. Find the moon crystals!");},900);
