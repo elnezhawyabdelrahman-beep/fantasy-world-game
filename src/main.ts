@@ -181,8 +181,8 @@ function attackEnemy(){
  target.health=Math.max(0,target.health-(target.id==="isle-warden"?40:30));
  target.root.rotation.y=player.rotation.y+Math.PI;
  if(target.health===0){
-  target.defeated=true;target.root.setEnabled(false);enemyDefeatedIds.push(target.id);experience+=120;addItem("sentinel-shard","بلورة الحارس","قطعة سحرية حصلت عليها بعد التحدي.");
-  toast("تم اجتياز التحدي! +120 XP ومكافأة جديدة.");refreshUI();void persist();
+  target.defeated=true;target.root.setEnabled(false);enemyDefeatedIds.push(target.id);if(target.id==="isle-warden"){experience+=650;addItem("warden-heart","قلب حارس الجزر","أثر نادر يرمز إلى استعادة توازن الجزر.");}else{experience+=120;addItem("sentinel-shard","بلورة الحارس","قطعة سحرية حصلت عليها بعد التحدي.");}
+  toast(target.id==="isle-warden"?"انتصرت على حارس الجزر! +650 XP ومكافأة أسطورية.":"تم اجتياز التحدي! +120 XP ومكافأة جديدة.");refreshUI();void persist();
  }else{toast("ضربة ناجحة! طاقة الحارس "+target.health+"/"+target.maxHealth);}
  refreshCombatUI();
 }
