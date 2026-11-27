@@ -168,9 +168,9 @@ let enemyDefeatedIds:string[]=[];
 function refreshCombatUI(){
  $("player-health-bar").style.width=Math.max(0,playerHealth)+"%";
  $("player-health-text").textContent=Math.max(0,playerHealth)+" / 100";
- const nearest=enemies.filter(e=>!e.defeated).sort((a,b)=>Vector3.DistanceSquared(player.position,a.root.position)-Vector3.DistanceSquared(player.position,b.root.position))[0];
+ const nearest=enemies.filter(e=>!e.defeated&&(e.id!=="isle-warden"||bossUnlocked)).sort((a,b)=>Vector3.DistanceSquared(player.position,a.root.position)-Vector3.DistanceSquared(player.position,b.root.position))[0];
  if(nearest&&Vector3.Distance(player.position,nearest.root.position)<13){
-  $("enemy-status").textContent="حارس الغابة · "+nearest.health+" / "+nearest.maxHealth;
+  $("enemy-status").textContent=(nearest.id==="isle-warden"?"حارس الجزر القديم":"حارس الغابة")+" · "+nearest.health+" / "+nearest.maxHealth;
  }else{$("enemy-status").textContent="لا يوجد خصم قريب";}
 }
 function attackEnemy(){
