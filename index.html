@@ -14,14 +14,14 @@
       <div id="loading-screen"><div class="loading-mark">✦</div><h1>Fantasy World</h1><p>Awakening the isles…</p><div class="loading-track"><span></span></div></div>
       <header class="topbar">
         <a class="brand" href="#" aria-label="Fantasy World home"><span class="brand-icon">✦</span><span>FANTASY <b>WORLD</b></span></a>
-        <div class="top-stats"><span class="stat-pill">✧ <b id="crystal-count">0</b></span><span class="stat-pill">LV <b id="level-count">1</b></span><button id="menu-button" class="icon-button" aria-label="Open menu">☰</button></div>
+        <div class="top-stats"><button id="inventory-button" class="icon-button" aria-label="Open inventory">▣</button><span class="stat-pill">✧ <b id="crystal-count">0</b></span><span class="stat-pill">LV <b id="level-count">1</b></span><button id="menu-button" class="icon-button" aria-label="Open menu">☰</button></div>
       </header>
       <section class="quest-card glass">
         <div class="eyebrow">CURRENT QUEST</div><h2 id="quest-title">A Light in the Forest</h2><p id="quest-description">Find 3 moon crystals scattered across the island.</p>
         <div class="quest-progress"><span id="quest-progress-bar"></span></div><small id="quest-progress-text">0 / 3 moon crystals</small>
       </section>
       <div class="hint-pill glass" id="hint">WASD to move · E to interact · Space to jump</div>
-      <section id="menu-panel" class="menu-panel glass hidden">
+      <section id="inventory-panel" class="inventory-panel glass hidden"><div class="inventory-heading"><div><div class="eyebrow">YOUR BELONGINGS</div><h2>Traveler’s Satchel</h2></div><button id="inventory-close" class="icon-button" aria-label="Close inventory">×</button></div><p id="inventory-empty">Your satchel is empty. Help the villagers to earn useful items.</p><div id="inventory-items" class="inventory-items"></div></section>\n      <section id="menu-panel" class="menu-panel glass hidden">
         <button id="resume-button" class="menu-action">Resume adventure</button>
         <button id="save-button" class="menu-action">Save progress</button>
         <button id="sound-button" class="menu-action">Sound: On</button>
