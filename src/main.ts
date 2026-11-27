@@ -99,6 +99,34 @@ const wellBeam=MeshBuilder.CreateBox("well-beam",{width:2.35,height:.16,depth:.1
 for(let i=0;i<15;i++){const z=-2.5-i*.82;const stone=MeshBuilder.CreateCylinder("village-path-stone",{height:.08,diameter:1.05,tessellation:8},scene);stone.position.set(Math.sin(i*.7)*.48,.045,z);stone.material=villagePath;}
 function makeLantern(x:number,z:number){const pole=MeshBuilder.CreateCylinder("lantern-post",{height:2.5,diameter:.12},scene);pole.position.set(x,1.25,z);pole.material=villageWood;const lamp=MeshBuilder.CreateBox("lantern-glass",{width:.48,height:.55,depth:.48},scene);lamp.position.set(x,2.62,z);lamp.material=crystalMat;const cap=MeshBuilder.CreateCylinder("lantern-cap",{height:.18,diameter:.68,tessellation:6},scene);cap.position.set(x,3,z);cap.material=goldMat;}
 [[-3,-5],[3,-5],[-5,-13],[5,-13]].forEach(([x,z])=>makeLantern(x,z));
+type WorldArea={id:string;name:string;center:Vector3;radius:number;discovered:boolean};
+const worldAreas:WorldArea[]=[
+ {id:"whispering-grove",name:"Whispering Grove",center:new Vector3(-25,0,18),radius:9,discovered:false},
+ {id:"ember-ridge",name:"Ember Ridge",center:new Vector3(27,0,17),radius:9,discovered:false},
+ {id:"frost-hollow",name:"Frost Hollow",center:new Vector3(-27,0,-22),radius:9,discovered:false}
+];
+const groveMat=makeMaterial("grove-moss",new Color3(.18,.34,.24));
+const emberMat=makeMaterial("ember-stone",new Color3(.36,.19,.16));
+const frostMat=makeMaterial("frost-crystal",new Color3(.48,.76,.86));
+function buildAreaLandmarks(){
+ const grove=worldAreas[0].center;
+ for(let i=0;i<7;i++){const a=i*Math.PI*2/7,x=grove.x+Math.cos(a)*5.5,z=grove.z+Math.sin(a)*5.5;const stump=MeshBuilder.CreateCylinder("grove-ancient-stump",{height:1.1,diameter:1.15,tessellation:8},scene);stump.position.set(x,.55,z);stump.material=groveMat;const canopy=MeshBuilder.CreateSphere("grove-canopy",{diameter:2.4,segments:8},scene);canopy.position.set(x,2,z);canopy.material=leafMats[i%leafMats.length];}
+ const ember=worldAreas[1].center;
+ for(let i=0;i<8;i++){const a=i*Math.PI*2/8,spire=MeshBuilder.CreatePolyhedron("ember-ridge-spire",{type:1,size:1.35+(i%3)*.25},scene);spire.position.set(ember.x+Math.cos(a)*6,1.1,ember.z+Math.sin(a)*6);spire.scaling.y=1.8;spire.material=emberMat;}
+ const frost=worldAreas[2].center;
+ for(let i=0;i<9;i++){const a=i*Math.PI*2/9,h=2.4+(i%3)*.65,shard=MeshBuilder.CreateCylinder("frost-hollow-spire",{height:h,diameterTop:.08,diameterBottom:.8,tessellation:6},scene);shard.position.set(frost.x+Math.cos(a)*5,h/2,frost.z+Math.sin(a)*5);shard.rotation.z=Math.sin(a)*.12;shard.material=frostMat;}
+}
+buildAreaLandmarks();
+type AncientRelic={id:string;name:string;description:string;mesh:Mesh;areaId:string};
+const ancientRelics:AncientRelic[]=[
+ {id:"relic-grove",name:"Seed of the First Tree",description:"An ancient seed from the heart of the Whispering Grove.",mesh:MeshBuilder.CreatePolyhedron("grove-relic",{type:1,size:.62},scene),areaId:"whispering-grove"},
+ {id:"relic-ember",name:"Emberheart",description:"A warm crystal recovered from Ember Ridge.",mesh:MeshBuilder.CreatePolyhedron("ember-relic",{type:1,size:.62},scene),areaId:"ember-ridge"},
+ {id:"relic-frost",name:"Frost Memory",description:"A clear shard holding the memory of Frost Hollow.",mesh:MeshBuilder.CreatePolyhedron("frost-relic",{type:1,size:.62},scene),areaId:"frost-hollow"}
+];
+ancientRelics.forEach((relic,i)=>{const area=worldAreas.find(a=>a.id===relic.areaId)!;relic.mesh.position.set(area.center.x,.95,area.center.z);relic.mesh.material=i===1?goldMat:i===2?frostMat:crystalMat;});
+let collectedRelicIds:string[]=[];
+let discoveredAreaIds:string[]=[];
+
 
 
 type ForestEnemy={id:string;root:TransformNode;home:Vector3;health:number;maxHealth:number;defeated:boolean;cooldown:number;phase:number;parts:Mesh[]};
