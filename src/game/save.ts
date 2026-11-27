@@ -6,6 +6,8 @@ export interface SaveData {
   player: { x: number; z: number };
   inventory?: { id: string; name: string; description: string; quantity: number }[];
   villageTasks?: string[];
+  enemyDefeatedIds?: string[];
+  playerHealth?: number;
 }
 const DB_NAME = "fantasy-world-save";
 const STORE = "progress";
