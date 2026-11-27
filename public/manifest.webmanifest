@@ -1,0 +1,12 @@
+{
+  "name": "Fantasy World — The Shattered Isles",
+  "short_name": "Fantasy World",
+  "description": "An offline-first 3D fantasy adventure.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#101b28",
+  "theme_color": "#101b28",
+  "icons": []
+}
