@@ -8,6 +8,8 @@ export interface SaveData {
   villageTasks?: string[];
   enemyDefeatedIds?: string[];
   playerHealth?: number;
+  collectedRelicIds?: string[];
+  discoveredAreaIds?: string[];
 }
 const DB_NAME = "fantasy-world-save";
 const STORE = "progress";
