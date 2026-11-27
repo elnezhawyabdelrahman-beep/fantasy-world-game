@@ -135,7 +135,7 @@ const regionGuides=[
  {cloth:new Color3(.22,.42,.3),trim:new Color3(.8,.72,.42),hair:new Color3(.18,.12,.08),skin:new Color3(.72,.52,.38),boots:new Color3(.18,.13,.09)},
  {cloth:new Color3(.5,.24,.16),trim:new Color3(.9,.58,.25),hair:new Color3(.28,.16,.09),skin:new Color3(.68,.46,.32),boots:new Color3(.16,.12,.1)},
  {cloth:new Color3(.32,.42,.58),trim:new Color3(.65,.83,.9),hair:new Color3(.7,.76,.82),skin:new Color3(.77,.62,.5),boots:new Color3(.18,.2,.25)}
- ][i])})));
+ ][i])}));
 
 
 
